@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rage Key</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--fg:#f5f2ea;--card:rgba(255,255,255,.09)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:inherit}
+body{margin:0;min-height:100vh;background:#1f2937;color:var(--fg);font-family:Georgia,"Times New Roman",serif;transition:background .8s;display:flex;gap:24px;padding:24px;flex-wrap:wrap}
+main{flex:1 1 380px;display:flex;flex-direction:column;justify-content:center;gap:20px;text-align:center}
+h1{margin:0;font-size:1rem;font-weight:normal;opacity:.7;letter-spacing:.05em}
+#riddle{font-size:1.35rem;font-style:italic;background:var(--card);padding:18px;border-radius:14px;line-height:1.5}
+#msg{font-size:clamp(1.8rem,5vw,3.2rem);font-weight:bold;min-height:7rem;line-height:1.2}
+#note{opacity:.85;min-height:1.5rem}
+#guesses{font-size:1.4rem;letter-spacing:.3em}
+aside{flex:0 0 230px;background:var(--card);border-radius:14px;padding:14px;max-height:85vh;overflow-y:auto;font-family:Menlo,Consolas,monospace}
+aside h2{margin:0 0 8px;font-size:.95rem;font-weight:normal}
+.row{display:flex;justify-content:space-between;padding:3px 6px;border-radius:6px}
+.row.done{background:rgba(134,239,172,.2);color:#bbf7d0}
+button{font:inherit;color:inherit;background:var(--card);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:8px 14px;cursor:pointer;margin-top:10px}
+button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+#win{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:14px}
+#win p{max-width:36rem;font-size:1.3rem;margin:0}
+</style>
+</head>
+<body>
+<main>
+  <h1>Rage Key</h1>
+  <div id="riddle"></div>
+  <div id="guesses" aria-live="polite"></div>
+  <div id="msg" aria-live="polite">Press a letter or number key to guess.</div>
+  <div id="note"></div>
+</main>
+<aside>
+  <h2 id="prog"></h2>
+  <div id="list"></div>
+  <button onclick="reset(false)">Reset progress</button>
+</aside>
+<div id="win">
+  <p id="winmsg"></p>
+  <p id="stats"></p>
+  <button onclick="reset(true)">Play again</button>
+</div>
+<script>
+const H={a:"I start the apple and finish the pizza.",b:"I appear three times in “bubble” and twice in “rabbit”.",c:"Say “circus” out loud: I’m both of its first and last sounds.",d:"I’m the first and last letter of “dad”.",e:"“Eleven” has me three times. “Seventeen” has me four.",f:"I double up in “stuff”, and I’m how you pay respects in a certain game.",g:"I’m silent in “sign” but loud in “signal”.",h:"I’m the second letter of “ghost”, and I hide at the start of “hour”.",i:"Together with A, I’m one of only two letters that is a word alone, and I’m the self-centered one.",j:"I’m the only letter that appears in no element of the periodic table.",k:"I appear twice in “knock”, and one of me is silent.",l:"I’m double in “hello” and silent in “walk”.",m:"Turn me upside down and I’m a W; in Rome I count a thousand.",n:"Turn me on my side and I’m a Z; I’m silent after M in “autumn”.",o:"Flip me, mirror me, spin me: I never change. I’m also a zero’s twin.",p:"Rotate me half a turn and I’m a D; I’m silent in “pneumonia”.",q:"I’m an O with a tail, and I never go anywhere without a U.",r:"I’m the middle of “bar”, “car”, and “far”, and every pirate’s favorite letter.",s:"I’m the first and last letter of “seas”, and I turn one cat into many.",t:"I’m a cross, a hot drink, and the end of “goat”, “boat”, and “coat”.",u:"I sound like “you”, and I’m shaped like a magnet.",v:"I’m five in Rome and the first letter of “victory”; raise two fingers and you’re me.",w:"I’m named for two of another letter, but I look like an upside-down M.",x:"I mark a treasure, I’m ten in Rome, and I’m a kiss at the end of a letter.",y:"Sometimes I’m a vowel, sometimes not; ask me why, and I answer by sounding like the question.",z:"I’m last in line, and in Britain I’m called “zed”; sleepers use me for snoring.",0:"You can’t divide by me, and I’m the shape of a donut’s hole.",1:"I’m the loneliest number, and neither prime nor composite.",2:"Add me to myself or multiply me by myself: same answer either way.",3:"I’m the sum of one and two, and the number of wishes in a genie’s deal.",4:"I’m the only number spelled with exactly as many letters as I’m worth.",5:"Hold up one hand, fingers spread: that’s me.",6:"I’m half a dozen, and my factors, one, two, and three, add up to me.",7:"Six was afraid of me because I ate nine.",8:"Turn me on my side and I’m infinity.",9:"Turn me upside down and I’m a 6; cats supposedly have this many lives."};
+const INS=["Congratulations. You found the key. The test is now 40% less embarrassing for both of us.","Well done. Your performance has been filed under “Surprising, Considering.”","That was the rage key. The scientists have recorded your reaction and asked me to stop laughing.","Correct. I’d give you a gold star, but the budget went toward replacing everything you’ve broken.","You solved it. I’m updating your file from “hopeless” to “statistically unlikely.”","Excellent. Your fingers moved with the confidence of someone who has never been right before.","Impressive. I’ve watched houseplants decide faster, but you did arrive eventually.","Success. Your reward is more testing. Your other reward is also more testing.","Oh, you found it. How nice to see the keyboard working harder than you are.","That’s the key. I had a bet going with the other computers. I lost, and I’m furious.","Please step away from the keyboard and reflect on how that went. You have three seconds.","Your performance is a triumph. Of what, I’m still working out."];
+const COMP=[["That keystroke just made a nearby pigeon fall in love with you.","Your fingers have the confidence of a raccoon who found the good dumpster.","Local wizards are already writing songs about that press.","You press keys like a golden retriever loves a tennis ball: completely, and with joy."],["That press was so smooth, butter filed a restraining order.","A passing goose described your typing as “majestic.”","Somewhere, a cowboy just tipped his hat at you for no reason.","You’re the reason the keyboard gets out of bed in the morning."],["A dragon heard that keystroke and asked if you’d be its accountant.","Your fingers are so fast, a hummingbird gave them a speeding ticket.","Archaeologists will find that keystroke in a thousand years and cry.","You have the aura of a wizard who files taxes early."],["The moon just changed its orbit for a better view of your typing.","Penguins in Antarctica are forming a fan club in your honor.","That keystroke was crowned honorary mayor of a small, confused town.","You type like a jazz octopus: eight arms, zero regrets."],["Dinosaurs went extinct because they weren’t ready for a press like that.","That keystroke just won a Nobel Prize in a category we had to invent.","Mount Everest is jealous of your standing in the typing community.","A thousand ninjas just bowed. One of them dropped a sandwich."],["Your fingers were declared a national treasure by a nation that doesn’t exist yet.","That press unlocked a secret level of the universe. There’s a free buffet.","Time stopped to watch you type. It’s still clapping.","Shakespeare would rewrite his plays if he’d seen your hands."],["The keys have started sending you fan mail.","Galaxies are rearranging themselves into your fingerprint out of respect.","Your typing is now listed among the wonders, right between the pyramids and nachos.","At this point you’re less a person and more a legend a wizard made up."]];
+const COL=["#1f2937","#1e3a5f","#14532d","#4a1d6b","#7c2d12","#831843","#0f766e"];
+const KEYS="abcdefghijklmnopqrstuvwxyz0123456789".split("");
+const ROWS={top:"qwertyuiop",home:"asdfghjkl",bottom:"zxcvbnm"},LEFT="qwertasdfgzxcvb12345";
+const ids=[];KEYS.forEach(k=>[0,1,2].forEach(i=>ids.push(k+i)));
+function bank(k){
+  const hand=LEFT.includes(k)?"left":"right";let a,b;
+  if(/[a-z]/.test(k)){
+    const row=Object.keys(ROWS).find(r=>ROWS[r].includes(k));
+    a="It lives on the "+row+" letter row and is typed with your "+hand+" hand.";
+    b="It’s letter #"+(k.charCodeAt(0)-96)+" of the alphabet, and it’s a "+("aeiou".includes(k)?"vowel":"consonant")+".";
+  }else{
+    a="It sits on the number row and is typed with your "+hand+" hand.";
+    b="It’s "+(k%2?"odd":"even")+" and "+(k>4?"bigger than 4":"4 or smaller")+".";
+  }
+  return [H[k],a,b];
+}
+let S={solved:[],g:0,r:0,s:0},cur,left,last,done=false;
+try{S=Object.assign(S,JSON.parse(localStorage.getItem("ragekey")))}catch(e){}
+const save=()=>{try{localStorage.setItem("ragekey",JSON.stringify(S))}catch(e){}};
+const $=id=>document.getElementById(id);
+const tier=()=>Math.min(6,Math.floor(S.solved.length/15));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const pool=()=>COMP.slice(0,tier()+1).flat();
+function render(){
+  $("guesses").textContent="●".repeat(left)+"○".repeat(5-left);
+  document.body.style.background=COL[tier()];
+  $("prog").textContent="Solved "+S.solved.length+"/"+ids.length;
+  $("list").innerHTML=KEYS.map(k=>{
+    const n=[0,1,2].filter(i=>S.solved.includes(k+i)).length;
+    return '<div class="row'+(n==3?" done":"")+'"><span>'+k.toUpperCase()+"</span><span>"+n+"/3</span></div>";
+  }).join("");
+}
+function newRun(){
+  const open=ids.filter(i=>!S.solved.includes(i));
+  if(!open.length)return win();
+  let p=open.filter(i=>i!==last);if(!p.length)p=open;
+  cur=pick(p);last=cur;left=5;
+  $("riddle").textContent="Riddle: "+bank(cur[0])[+cur[1]];
+  render();
+}
+function win(){
+  done=true;render();
+  $("winmsg").textContent="Every riddle solved. I’d call that impressive, but I’ve seen what you did to the first few.";
+  $("stats").textContent="Total guesses: "+S.g+" · Runs: "+S.r+" · Skips: "+S.s;
+  $("win").style.display="flex";
+}
+function reset(force){
+  if(!force&&!confirm("Erase all progress?"))return;
+  S={solved:[],g:0,r:0,s:0};done=false;last=null;save();
+  $("win").style.display="none";$("note").textContent="";
+  $("msg").textContent="Press a letter or number key to guess.";newRun();
+}
+addEventListener("keydown",e=>{
+  if(done||e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key.toLowerCase();if(!/^[a-z0-9]$/.test(k))return;
+  S.g++;const before=tier();let again=false;
+  if(k===cur[0]){
+    S.solved.push(cur);S.r++;again=true;
+    $("msg").textContent=pick(INS);
+    $("note").textContent="Rage key found! Riddle solved."+(tier()>before?" New compliments unlocked!":"");
+  }else{
+    left--;$("msg").textContent=pick(pool());
+    $("note").textContent="Not the rage key.";
+    if(!left){S.s++;S.r++;again=true;$("note").textContent="Out of guesses. Riddle skipped; it may return.";}
+  }
+  save();again?newRun():render();
+});
+newRun();
+</script>
+</body>
+</html>
